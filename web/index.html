@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kairos — 智能自建專注守護與時間統計系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Kairos" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <meta name="theme-color" content="#06080e" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-cyan"></div>
+  <div class="ambient-glow glow-purple"></div>
+
+  <!-- Mobile Top Bar -->
+  <div class="mobile-navbar">
+    <button class="btn-hamburger" id="btn-mobile-menu" aria-label="切換選單">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    <div class="mobile-brand">
+      <span class="brand-name">KAIROS</span>
+      <span class="mobile-tag">LOCAL</span>
+    </div>
+    <div class="mobile-quick-timer" id="mobile-quick-timer">
+      🍅 <span id="mobile-timer-digits">25:00</span>
+    </div>
+  </div>
+
+  <!-- Sidebar Overlay Backdrop for Mobile -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+  <!-- Notification Banner Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="app-sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <div class="brand-name">KAIROS</div>
+          <div class="brand-tag">LOCAL & PRIVATE</div>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="tab-overview">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          即時總覽
+        </button>
+        <button class="nav-item" data-tab="tab-pomodoro">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="9"></circle><path d="M12 3v9l4 4"></path></svg>
+          番茄專注艙
+        </button>
+        <button class="nav-item" data-tab="tab-rules">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          防繞過與政策
+        </button>
+        <button class="nav-item" data-tab="tab-trends">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+          歷史與標籤
+        </button>
+        <button class="nav-item" data-tab="tab-devices">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          跨平台 (iPad/手機)
+        </button>
+        <button class="nav-item" data-tab="tab-privacy">
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          隱私與備份
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="guard-status-badge">
+          <span class="status-pulse"></span>
+          <span>本機守護進程運行中</span>
+        </div>
+        <div class="privacy-note">Zero-Telemetry · 100% SQLite</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="active-task-pill">
+          <span class="pill-dot"></span>
+          <span class="pill-label">前台焦點：</span>
+          <span id="header-active-app" class="pill-value">檢測中...</span>
+          <span id="header-active-title" class="pill-title"></span>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="device-select-wrap">
+            <select id="select-device-filter" class="form-control-sm device-dropdown" title="篩選裝置">
+              <option value="all">🌐 所有裝置</option>
+              <option value="windows">💻 Windows 電腦</option>
+              <option value="android">📱 Android 手機</option>
+              <option value="ipad">📋 iPad 平板</option>
+            </select>
+          </div>
+          <div class="quick-timer-badge" id="topbar-pomodoro-status">
+            <span class="icon">🍅</span>
+            <span id="topbar-timer-text">25:00</span>
+          </div>
+          <button class="btn btn-outline btn-sm sync-btn-pill" id="btn-open-sync-modal" title="跨裝置雙向同步">
+            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <span id="sync-btn-label">同步</span>
+            <span class="badge-sync-count" id="sync-pending-badge" style="display: none;">0</span>
+          </button>
+          <button class="btn-icon" id="btn-refresh-data" title="重新整理統計">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- TAB 1: OVERVIEW -->
+      <section id="tab-overview" class="tab-panel active">
+        <!-- Metric Cards Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card glass-panel">
+            <div class="card-header">
+              <span class="card-title">今日使用時長</span>
+              <span class="card-badge badge-cyan">即時累計</span>
+            </div>
+            <div class="card-value" id="val-total-time">0h 00m</div>
+            <div class="card-subtext">
+              <span>活躍：<strong id="val-active-time">0m</strong></span>
+              <span>閒置：<span id="val-idle-time">0m</span></span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-cyan" id="bar-total-time" style="width: 5%"></div>
+            </div>
+          </div>
+
+          <div class="metric-card glass-panel">
+            <div class="card-header">
+              <span class="card-title">專注生產力指數</span>
+              <span class="card-badge badge-green" id="badge-focus-level">良好</span>
+            </div>
+            <div class="card-value" id="val-focus-score">0.0<span class="unit">分</span></div>
+            <div class="card-subtext">
+              <span class="tag-prod">⚡ 生產力: <strong id="val-prod-time">0m</strong></span>
+              <span class="tag-dist">⚠️ 分心: <span id="val-dist-time">0m</span></span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-green" id="bar-focus-score" style="width: 50%"></div>
+            </div>
+          </div>
+
+          <div class="metric-card glass-panel">
+            <div class="card-header">
+              <span class="card-title">今日番茄鐘</span>
+              <span class="card-badge badge-purple" id="badge-pomo-status">待命</span>
+            </div>
+            <div class="card-value" id="val-pomo-count">0 <span class="unit">顆完成</span></div>
+            <div class="card-subtext">
+              <span id="val-pomo-phase">模式：25分鐘專注</span>
+              <span id="val-pomo-remain">剩餘 25:00</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-purple" id="bar-pomo" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div class="metric-card glass-panel">
+            <div class="card-header">
+              <span class="card-title">超時干預與阻擋</span>
+              <span class="card-badge badge-amber" id="badge-strict-mode">嚴格防禦</span>
+            </div>
+            <div class="card-value" id="val-interventions-count">0 <span class="unit">次</span></div>
+            <div class="card-subtext">
+              <span>已設限制規則：<strong id="val-active-rules-count">0</strong> 條</span>
+              <span class="snooze-indicator" id="val-snooze-status">延長可用</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-amber" id="bar-interventions" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Columns: Top Apps Leaderboard + Analytics Panels -->
+        <div class="dashboard-two-col">
+          <!-- Left Column: App Usage Leaderboard -->
+          <div class="panel-section glass-panel">
+            <div class="section-header">
+              <div>
+                <h3 class="section-title">應用程式排行 (Leaderboard)</h3>
+                <p class="section-desc">即時追蹤今日活躍視窗與進程累計秒數</p>
+              </div>
+              <button class="btn-sm btn-outline" id="btn-quick-add-rule">+ 針對前台設定規則</button>
+            </div>
+
+            <div class="apps-table-container">
+              <table class="data-table" id="apps-leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>應用程式</th>
+                    <th>分類</th>
+                    <th>時長</th>
+                    <th>佔比</th>
+                    <th>生產力標籤</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="apps-table-body">
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-4">載入數據中...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right Column: Visual Breakdown -->
+          <div class="panel-section-stacked">
+            <!-- Productivity Distribution -->
+            <div class="glass-panel p-4">
+              <h4 class="card-title mb-3">生產力佔比</h4>
+              <div class="stacked-bar-container" id="productivity-stacked-bar">
+                <div class="bar-segment seg-productive" style="width: 60%" title="深度工作"></div>
+                <div class="bar-segment seg-neutral" style="width: 25%" title="中性輔助"></div>
+                <div class="bar-segment seg-distracting" style="width: 15%" title="分心娛樂"></div>
+              </div>
+              <div class="legend-row">
+                <div class="legend-item"><span class="dot dot-prod"></span> 生產力 (<span id="pct-prod">0%</span>)</div>
+                <div class="legend-item"><span class="dot dot-neut"></span> 中性 (<span id="pct-neut">0%</span>)</div>
+                <div class="legend-item"><span class="dot dot-dist"></span> 分心 (<span id="pct-dist">0%</span>)</div>
+              </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="glass-panel p-4">
+              <h4 class="card-title mb-3">分類時間分佈</h4>
+              <div class="category-bars-list" id="category-bars-list">
+                <!-- Dynamically injected -->
+              </div>
+            </div>
+
+            <!-- Tags Cloud -->
+            <div class="glass-panel p-4">
+              <h4 class="card-title mb-3">多維度標籤 (Tags)</h4>
+              <div class="tags-cloud" id="tags-cloud-container">
+                <!-- Dynamically injected tags -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 24-Hour Timeline Stream -->
+        <div class="glass-panel p-4 mt-4">
+          <div class="section-header mb-3">
+            <div>
+              <h3 class="section-title">24 小時作息與活動熱圖 (Activity Timeline)</h3>
+              <p class="section-desc">視覺化今日每小時螢幕活躍分佈</p>
+            </div>
+            <span class="text-muted text-sm">單位：分鐘/小時</span>
+          </div>
+          <div class="timeline-histogram" id="timeline-histogram-wrap">
+            <!-- 24 hourly columns -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: POMODORO FOCUS HUB -->
+      <section id="tab-pomodoro" class="tab-panel">
+        <div class="pomodoro-container glass-panel">
+          <div class="pomodoro-header">
+            <h2 class="title-glow">Kairos 專注引力艙</h2>
+            <p class="text-muted">深層心流模式：專注期間自動提升防護等級，完全封鎖分心程式</p>
+          </div>
+
+          <!-- Mode Toggle Buttons -->
+          <div class="pomo-modes">
+            <button class="mode-btn active" data-pomo="focus" data-min="25">🍅 專注模式 (25m)</button>
+            <button class="mode-btn" data-pomo="deep" data-min="50">⚡ 深度心流 (50m)</button>
+            <button class="mode-btn" data-pomo="short_break" data-min="5">☕ 短休息 (5m)</button>
+            <button class="mode-btn" data-pomo="long_break" data-min="15">🌴 長休息 (15m)</button>
+          </div>
+
+          <!-- Circular Glowing Clock Display -->
+          <div class="pomo-clock-wrap">
+            <svg class="clock-svg" viewBox="0 0 280 280">
+              <circle class="clock-track" cx="140" cy="140" r="120"></circle>
+              <circle class="clock-indicator" id="pomo-svg-indicator" cx="140" cy="140" r="120"></circle>
+            </svg>
+            <div class="clock-content">
+              <div class="clock-mode-label" id="clock-mode-label">FOCUS</div>
+              <div class="clock-digits" id="clock-digits">25:00</div>
+              <div class="clock-sub-label" id="clock-sub-label">今日已完成 0 個番茄</div>
+            </div>
+          </div>
+
+          <!-- Action Controls -->
+          <div class="pomo-controls">
+            <button class="btn btn-primary btn-lg" id="btn-pomo-toggle">開始專注</button>
+            <button class="btn btn-secondary btn-lg" id="btn-pomo-reset">重置</button>
+            <button class="btn btn-outline btn-lg" id="btn-pomo-skip">跳過</button>
+          </div>
+
+          <!-- Strict Mode Toggle Card -->
+          <div class="pomo-policy-card">
+            <div class="policy-info">
+              <div class="policy-title">嚴格專注防繞過 (Strict Focus Guard)</div>
+              <div class="policy-desc">專注進行中，開啟任何娛樂/分心程式將立即強制最小化並彈出冷卻遮罩！</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="toggle-strict-focus" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: RULES & LIMITS GUARDIAN -->
+      <section id="tab-rules" class="tab-panel">
+        <div class="glass-panel p-4 mb-4">
+          <div class="section-header">
+            <div>
+              <h2 class="section-title">限制政策與規則引擎</h2>
+              <p class="section-desc">自訂進程、視窗標題匹配模式、分類標籤、每日時間上限與防繞過攔截動作</p>
+            </div>
+            <button class="btn btn-primary" id="btn-open-rule-modal">+ 新增防護規則</button>
+          </div>
+
+          <!-- Rule Filters -->
+          <div class="rule-filter-bar">
+            <input type="text" id="rule-search-input" class="search-input" placeholder="搜尋規則、程式名、標籤..." />
+            <div class="filter-chips">
+              <button class="chip active" data-filter="all">全部</button>
+              <button class="chip" data-filter="limit">有限額</button>
+              <button class="chip" data-filter="strict">嚴格鎖定</button>
+              <button class="chip" data-filter="warn">柔性提醒</button>
+            </div>
+          </div>
+
+          <!-- Rules List Table -->
+          <div class="rules-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>狀態</th>
+                  <th>匹配類型</th>
+                  <th>匹配規則 / 關鍵字</th>
+                  <th>分類</th>
+                  <th>標籤</th>
+                  <th>生產力權重</th>
+                  <th>每日上限</th>
+                  <th>超時處置策略</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="rules-table-body">
+                <!-- Dynamically injected rules -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Custom Categories & Taxonomies Panel -->
+        <div class="glass-panel p-4 mb-4">
+          <div class="section-header mb-3">
+            <div>
+              <h2 class="section-title">自訂分類與多維度標籤 (Categories Manager)</h2>
+              <p class="section-desc">自由新增自訂分類、自選主題代表色、專屬 Emoji 圖示與預設生產力權重，完全客製化您的工作流</p>
+            </div>
+            <button class="btn btn-outline" id="btn-open-category-modal">
+              <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              新增自訂分類
+            </button>
+          </div>
+
+          <div class="categories-grid" id="categories-grid-container">
+            <!-- Dynamically injected category cards -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: TRENDS & HISTORICAL ANALYTICS -->
+      <section id="tab-trends" class="tab-panel">
+        <div class="glass-panel p-4 mb-4">
+          <div class="section-header mb-4">
+            <div>
+              <h2 class="section-title">7 天歷史趨勢與專注洞察</h2>
+              <p class="section-desc">分析過去一週的時間分配與自律指數變化</p>
+            </div>
+          </div>
+
+          <div class="weekly-cards-grid" id="weekly-cards-container">
+            <!-- Dynamically injected weekly trend cards -->
+          </div>
+
+          <!-- Recent Interventions Log -->
+          <div class="mt-5">
+            <h3 class="section-title mb-3">最近干預與攔截紀錄 (Audit Log)</h3>
+            <div class="interventions-list" id="interventions-list-container">
+              <!-- Dynamically injected -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: PRIVACY & BACKUP -->
+      <section id="tab-privacy" class="tab-panel">
+        <div class="glass-panel p-5 privacy-container">
+          <div class="privacy-header">
+            <div class="privacy-badge">100% PRIVATE & OFFLINE</div>
+            <h2 class="title-glow">您的個人時間資料，完全屬於您</h2>
+            <p class="text-muted">Kairos 是完全自建自託管（Self-Hosted）的系統。所有的視窗焦點、使用時長與標籤記錄均保存在您電腦的本地 SQLite 資料庫中。</p>
+          </div>
+
+          <div class="privacy-features-grid">
+            <div class="privacy-feature-card">
+              <div class="feat-icon">🛡️</div>
+              <div class="feat-title">零第三方雲端連網</div>
+              <div class="feat-desc">絕無 Google Analytics、無外部 Sentry 追蹤、無任何廣告代碼，完全斷網依然正常運作。</div>
+            </div>
+            <div class="privacy-feature-card">
+              <div class="feat-icon">💾</div>
+              <div class="feat-title">開放透明本地 SQLite</div>
+              <div class="feat-desc">資料儲存於 <code>data/kairos.db</code>，您可隨時使用任何 SQLite 檢視器查驗或自建備份。</div>
+            </div>
+            <div class="privacy-feature-card">
+              <div class="feat-icon">📦</div>
+              <div class="feat-title">完整數據自由匯出</div>
+              <div class="feat-desc">一鍵匯出全量 JSON / 統計報表，隨時遷移或整合至個人的 Notion、Obsidian 工作流。</div>
+            </div>
+          </div>
+
+          <div class="backup-actions-panel glass-panel p-4 mt-4">
+            <h4 class="card-title mb-2">資料匯出與備份管理</h4>
+            <p class="text-muted text-sm mb-3">匯出目前系統保存的所有事件記錄。</p>
+            <div class="action-buttons-row">
+              <a href="/api/export" target="_blank" class="btn btn-primary">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                下載完整 JSON 備份檔
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB: CROSS-PLATFORM DEVICES (iPad / Android) -->
+      <section id="tab-devices" class="tab-panel">
+        <div class="glass-panel p-5 privacy-container">
+          <div class="privacy-header">
+            <div class="privacy-badge">CROSS-PLATFORM ECOSYSTEM</div>
+            <h2 class="title-glow">📱 iPad & Android 跨平台連線中心</h2>
+            <p class="text-muted">隨身掌控時間數據、跨裝置同步番茄鐘、防繞過集中管理</p>
+          </div>
+
+          <!-- Quick Connect Card -->
+          <div class="glass-panel p-4 mb-4">
+            <div class="section-header mb-3">
+              <div>
+                <h3 class="section-title">區域網路 (Wi-Fi) 連線網址</h3>
+                <p class="section-desc">請確保 iPad 或 Android 手機連接至相同的 Wi-Fi</p>
+              </div>
+            </div>
+
+            <div class="lan-connect-box">
+              <div class="lan-url-display">
+                <span class="lan-label">連線網址：</span>
+                <span id="display-lan-url" class="lan-url-text">載入中...</span>
+              </div>
+              <button class="btn btn-primary btn-sm" id="btn-copy-lan-url">
+                複製網址
+              </button>
+            </div>
+
+            <!-- Connected Devices List -->
+            <div class="mt-4">
+              <h4 class="card-title mb-2">已連線裝置列表</h4>
+              <div class="devices-list" id="devices-list-container">
+                <!-- Dynamically loaded devices -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 2 Platform Cards: iPad & Android Guides -->
+          <div class="dashboard-two-col mt-4">
+            <!-- iPad / iOS Card -->
+            <div class="glass-panel p-4">
+              <div class="app-cell mb-3">
+                <div class="app-icon-badge" style="background: rgba(168, 85, 247, 0.15); border-color: var(--accent-purple); color: var(--accent-purple);">📋</div>
+                <div>
+                  <h3 class="section-title">iPad / iOS 使用指南</h3>
+                  <span class="text-dim text-sm">PWA 原生全螢幕 + 捷徑自動化</span>
+                </div>
+              </div>
+              <ol class="guide-steps-list">
+                <li><strong>加到主畫面：</strong>在 iPad Safari 開啟上方連線網址，點「分享」按鈕 ➔ 選擇<strong>「加入主畫面」</strong>，即可享受無網址列的原生 App 體驗。</li>
+                <li><strong>防繞過自動化 (選用)：</strong>利用 iPad 內建的「捷徑 App」，設定<strong>「當開啟分心 App 時」</strong>自動向 Kairos 後端查詢是否處於專注時段。</li>
+                <li>若正在專注中，捷徑自動執行<strong>「返回主畫面」</strong>，達到在封閉系統上的強力專注防繞過！</li>
+              </ol>
+              <div class="mt-3">
+                <span class="text-muted text-sm">詳細自動化動作代碼請參閱：</span>
+                <code class="font-mono text-cyan text-sm">clients/ios_shortcuts/README.md</code>
+              </div>
+            </div>
+
+            <!-- Android Card -->
+            <div class="glass-panel p-4">
+              <div class="app-cell mb-3">
+                <div class="app-icon-badge" style="background: rgba(16, 185, 129, 0.15); border-color: var(--accent-green); color: var(--accent-green);">🤖</div>
+                <div>
+                  <h3 class="section-title">Android 手機使用指南</h3>
+                  <span class="text-dim text-sm">Chrome PWA + 應用使用回傳</span>
+                </div>
+              </div>
+              <ol class="guide-steps-list">
+                <li><strong>安裝 PWA：</strong>在手機 Chrome 開啟連線網址，點右上角選單 ➔ 選擇<strong>「安裝應用程式」</strong>加入手機桌面。</li>
+                <li><strong>隨身專注控制台：</strong>在手機上一鍵啟動/重置番茄鐘、隨時查看電腦前台活躍進程。</li>
+                <li><strong>手機 App 使用量同步 (進階)：</strong>透過 Termux 或 Tasker 執行專屬回傳腳本，自動將 Android 前台 App 使用時間累計到中央 SQLite！</li>
+              </ol>
+              <div class="mt-3">
+                <span class="text-muted text-sm">腳本與說明位於：</span>
+                <code class="font-mono text-cyan text-sm">clients/android/README.md</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Add / Edit Rule -->
+  <div class="modal-backdrop" id="rule-modal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3 class="modal-title" id="rule-modal-title">新增防護規則</h3>
+        <button class="btn-close" id="btn-close-modal">&times;</button>
+      </div>
+      <form id="rule-form">
+        <div class="form-group">
+          <label>匹配類型 (Pattern Type)</label>
+          <select id="form-rule-type" class="form-control">
+            <option value="app">應用程式名稱 (.exe, 例如: discord.exe, steam.exe)</option>
+            <option value="title">視窗標題包含 (例如: youtube, twitter, netflix)</option>
+            <option value="regex">正規表達式 (進階)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>匹配關鍵字 / 進程名稱</label>
+          <input type="text" id="form-rule-pattern" class="form-control" placeholder="例如: steam.exe 或 youtube" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>分類 (Category)</label>
+            <select id="form-rule-category" class="form-control">
+              <option value="Development">開發工作 (Development)</option>
+              <option value="Productivity">高專注生產力 (Productivity)</option>
+              <option value="Communication">通訊通話 (Communication)</option>
+              <option value="Social Media">社群網路 (Social Media)</option>
+              <option value="Entertainment">影音娛樂 (Entertainment)</option>
+              <option value="Gaming">遊戲電玩 (Gaming)</option>
+              <option value="Utilities">系統工具 (Utilities)</option>
+              <option value="Uncategorized">未分類 (Uncategorized)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>生產力評分 (Productivity Score)</label>
+            <select id="form-rule-score" class="form-control">
+              <option value="2">+2 深度生產力 (IDE, 文件)</option>
+              <option value="1">+1 輔助工作 (Chat, 筆記)</option>
+              <option value="0" selected>0 中性 / 系統</option>
+              <option value="-1">-1 輕度分心</option>
+              <option value="-2">-2 深度娛樂 / 成癮阻擋</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>多維度自訂標籤 (Tags, 逗號分隔)</label>
+          <input type="text" id="form-rule-tags" class="form-control" placeholder="例如: project_kairos, clientA, coding" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>每日使用上限 (分鐘數，0 為不限)</label>
+            <input type="number" id="form-rule-limit" class="form-control" min="0" value="0" placeholder="例如: 30" />
+          </div>
+
+          <div class="form-group">
+            <label>超時處置策略 (Block Action)</label>
+            <select id="form-rule-action" class="form-control">
+              <option value="none">僅統計，不干預 (None)</option>
+              <option value="soft_warn">柔性呼吸聲效提醒 (Soft Warn)</option>
+              <option value="strict_lock">嚴格強制最小化 + 冷卻遮罩 (Strict Lock)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">取消</button>
+          <button type="submit" class="btn btn-primary">儲存規則</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add / Edit Category -->
+  <div class="modal-backdrop" id="category-modal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3 class="modal-title" id="cat-modal-title">新增自訂分類</h3>
+        <button class="btn-close" id="btn-close-cat-modal">&times;</button>
+      </div>
+      <form id="category-form">
+        <input type="hidden" id="form-cat-id" value="" />
+        
+        <div class="form-group">
+          <label>分類代碼 (英文標識 Identifier)</label>
+          <input type="text" id="form-cat-name" class="form-control font-mono" placeholder="例如: SideProject, Anime, Reading" required />
+          <span class="text-dim text-xs mt-1">規則與事件匹配時使用的唯一名稱標識</span>
+        </div>
+
+        <div class="form-group">
+          <label>介面中文顯示名稱 (Display Name)</label>
+          <input type="text" id="form-cat-display" class="form-control" placeholder="例如: 個人副業、動漫追番、深度閱讀" required />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>圖示 (Emoji Icon)</label>
+            <input type="text" id="form-cat-icon" class="form-control text-center" style="font-size: 1.2rem;" maxlength="6" value="📁" required />
+            <div class="quick-emojis mt-1">
+              <span class="emoji-chip" onclick="selectEmoji('🚀')">🚀</span>
+              <span class="emoji-chip" onclick="selectEmoji('💻')">💻</span>
+              <span class="emoji-chip" onclick="selectEmoji('📚')">📚</span>
+              <span class="emoji-chip" onclick="selectEmoji('🎬')">🎬</span>
+              <span class="emoji-chip" onclick="selectEmoji('🎮')">🎮</span>
+              <span class="emoji-chip" onclick="selectEmoji('💼')">💼</span>
+              <span class="emoji-chip" onclick="selectEmoji('🎨')">🎨</span>
+              <span class="emoji-chip" onclick="selectEmoji('🍵')">🍵</span>
+              <span class="emoji-chip" onclick="selectEmoji('💡')">💡</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>代表色彩 (Color Theme)</label>
+            <div class="color-picker-wrap">
+              <input type="color" id="form-cat-color" value="#38bdf8" class="color-swatch-input" />
+              <input type="text" id="form-cat-color-hex" class="form-control font-mono" value="#38bdf8" />
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>預設生產力權重 (Default Score)</label>
+          <select id="form-cat-score" class="form-control">
+            <option value="2">+2 深度生產力 (Focus / Deep Work)</option>
+            <option value="1">+1 輔助工作 (Auxiliary / Notes)</option>
+            <option value="0" selected>0 中性 / 系統工具 (Neutral / Tool)</option>
+            <option value="-1">-1 輕度分心 (Light Distraction)</option>
+            <option value="-2">-2 深度娛樂 / 成癮阻擋 (Distracting / Block)</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-cat-modal">取消</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-cat">儲存分類</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- MODAL: Local-First Cross-Device Sync -->
+  <div class="modal-backdrop" id="sync-modal">
+    <div class="modal-card glass-panel">
+      <div class="modal-header">
+        <h3 class="modal-title">🔄 跨裝置一鍵雙向同步 (Local-First Sync)</h3>
+        <button class="btn-close" id="btn-close-sync-modal">&times;</button>
+      </div>
+      <div class="p-1">
+        <p class="text-muted text-sm mb-3">
+          每個裝置各自獨立離線運作。回家或電腦開機時，只要連上相同 Wi-Fi 並點擊同步，即可將 iPad / 手機離線累積的專注與使用時間無縫合併至電腦中央資料庫！
+        </p>
+
+        <div class="form-group">
+          <label>電腦主機連線網址 (Kairos Host URL)</label>
+          <input type="text" id="sync-server-input" class="form-control font-mono" placeholder="http://192.168.1.107:5050" />
+        </div>
+
+        <div class="sync-status-box glass-panel p-3 mb-3">
+          <div class="sync-status-row">
+            <span>本機待同步記錄：</span>
+            <strong id="sync-pending-events" class="text-cyan">0 筆事件 / 0 顆番茄</strong>
+          </div>
+          <div class="sync-status-row text-sm text-dim mt-2">
+            <span>上次成功同步：</span>
+            <span id="sync-last-time">尚未同步</span>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-sync">取消</button>
+          <button type="button" class="btn btn-primary" id="btn-start-sync">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            立即開始雙向同步
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
