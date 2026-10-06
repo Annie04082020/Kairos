@@ -374,6 +374,7 @@ def snooze_app(req: SnoozeRequest):
 def list_interventions():
     return {"interventions": get_recent_interventions(15)}
 
+
 @app.get("/api/export")
 def export_data():
     conn = get_connection()
@@ -385,6 +386,31 @@ def export_data():
         "total_records": len(events),
         "events": events
     }
+
+# StayFree Bridge Endpoints (Dedicated for iPad / iOS data import)
+from kairos.stayfree_bridge import stayfree_bridge
+
+
+class StayFreeSyncRequest(BaseModel):
+    target_creators: Optional[List[str]] = None
+
+class StayFreeToggleRequest(BaseModel):
+    enabled: bool
+
+@app.get("/api/stayfree/status")
+def get_stayfree_status():
+    return stayfree_bridge.get_status()
+
+@app.post("/api/stayfree/sync")
+def trigger_stayfree_sync(req: Optional[StayFreeSyncRequest] = None):
+    creators = req.target_creators if req else None
+    return stayfree_bridge.sync_ipad_sessions(target_creators=creators)
+
+@app.post("/api/stayfree/toggle-auto")
+def toggle_stayfree_auto(req: StayFreeToggleRequest):
+    stayfree_bridge.auto_sync_enabled = req.enabled
+    return {"auto_sync_enabled": stayfree_bridge.auto_sync_enabled}
+
 
 # Mount Web Dashboard Frontend
 import os

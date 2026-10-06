@@ -40,6 +40,15 @@ const dom = {
   syncPendingBadge: document.getElementById('sync-pending-badge'),
   syncLastTime: document.getElementById('sync-last-time'),
 
+  // StayFree iPad Bridge
+  stayfreeStatusBadge: document.getElementById('stayfree-status-badge'),
+  sfInfoInstalled: document.getElementById('sf-info-installed'),
+  sfInfoGroup: document.getElementById('sf-info-group'),
+  sfInfoCached: document.getElementById('sf-info-cached'),
+  sfInfoLastSync: document.getElementById('sf-info-last-sync'),
+  sfToggleAutoSync: document.getElementById('sf-toggle-auto-sync'),
+  btnStayfreeSyncNow: document.getElementById('btn-stayfree-sync-now'),
+
   // Metrics
   valTotalTime: document.getElementById('val-total-time'),
   valActiveTime: document.getElementById('val-active-time'),
@@ -978,8 +987,96 @@ async function loadNetworkAndDevices() {
       const data = await resDev.json();
       renderDevices(data.devices || []);
     }
+
+    // Load StayFree status
+    await loadStayFreeStatus();
   } catch (err) {
-    console.error('Error loading devices:', err);
+    console.error('Error loading devices / StayFree:', err);
+  }
+}
+
+async function loadStayFreeStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/stayfree/status`);
+    if (!res.ok) return;
+    const data = await res.json();
+
+    if (dom.stayfreeStatusBadge) {
+      if (data.installed) {
+        dom.stayfreeStatusBadge.innerHTML = `<span class="pill-badge pill-prod" style="background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid var(--accent-green);">● 已連線本地 StayFree</span>`;
+      } else {
+        dom.stayfreeStatusBadge.innerHTML = `<span class="pill-badge pill-neut">未檢測到本機 StayFree</span>`;
+      }
+    }
+
+    if (dom.sfInfoInstalled) {
+      dom.sfInfoInstalled.innerHTML = data.installed 
+        ? `<span class="text-green font-semibold">🟢 運行中 (偵測到 ${data.device_count || 0} 台裝置)</span>` 
+        : `<span class="text-muted">未安裝桌面版</span>`;
+    }
+
+    if (dom.sfInfoGroup) {
+      dom.sfInfoGroup.textContent = data.device_group || '無群組資料';
+    }
+
+    if (dom.sfInfoCached) {
+      dom.sfInfoCached.textContent = `${data.cached_sessions_count || 0} 筆事件`;
+    }
+
+    if (dom.sfInfoLastSync) {
+      dom.sfInfoLastSync.textContent = data.last_sync_time 
+        ? `${data.last_sync_time} (匯入 ${data.last_imported_count} 筆)` 
+        : '尚未手動同步';
+    }
+
+    if (dom.sfToggleAutoSync && data.auto_sync_enabled !== undefined) {
+      dom.sfToggleAutoSync.checked = data.auto_sync_enabled;
+    }
+  } catch (err) {
+    console.error('Error loading StayFree status:', err);
+  }
+}
+
+async function triggerStayFreeSync() {
+  if (!dom.btnStayfreeSyncNow) return;
+  dom.btnStayfreeSyncNow.disabled = true;
+  dom.btnStayfreeSyncNow.textContent = '同步 iPad 數據中...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/stayfree/sync`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`🎉 成功同步！匯入 ${data.imported_count || 0} 筆 iPad 使用事件！`);
+      await loadStayFreeStatus();
+      await loadNetworkAndDevices();
+      fetchTodayStats();
+    } else {
+      alert(`同步失敗：${data.message || data.error || '未知錯誤'}`);
+    }
+  } catch (err) {
+    console.error(err);
+    alert('無法連線至 StayFree 橋接器');
+  } finally {
+    dom.btnStayfreeSyncNow.disabled = false;
+    dom.btnStayfreeSyncNow.innerHTML = `
+      <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+      立即同步 iPad 數據
+    `;
+  }
+}
+
+async function toggleStayFreeAutoSync(enabled) {
+  try {
+    const res = await fetch(`${API_BASE}/api/stayfree/toggle-auto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled })
+    });
+    if (res.ok) {
+      showToast(`已${enabled ? '開啟' : '關閉'} StayFree iPad 自動定時背景同步`);
+    }
+  } catch (err) {
+    console.error('Error toggling auto sync:', err);
   }
 }
 
@@ -1015,6 +1112,7 @@ function renderDevices(devices) {
   });
   dom.devicesListContainer.innerHTML = html;
 }
+
 
 // --------------------------------------------------------------------------
 // Local-First Offline Storage & Synchronization Engine
@@ -1233,6 +1331,18 @@ function init() {
   if (dom.btnStartSync) {
     dom.btnStartSync.addEventListener('click', triggerSync);
   }
+
+  // StayFree Bridge Controls
+  if (dom.btnStayfreeSyncNow) {
+    dom.btnStayfreeSyncNow.addEventListener('click', triggerStayFreeSync);
+  }
+
+  if (dom.sfToggleAutoSync) {
+    dom.sfToggleAutoSync.addEventListener('change', (e) => {
+      toggleStayFreeAutoSync(e.target.checked);
+    });
+  }
 }
+
 
 window.addEventListener('DOMContentLoaded', init);

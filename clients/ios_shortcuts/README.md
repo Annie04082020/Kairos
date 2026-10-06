@@ -45,3 +45,18 @@ Apple 的 iOS / iPadOS 系統具備嚴格的沙盒保護，第三方 App 無法�
        - 加入動作：**「前往主畫面 (Go to Home Screen)」** (自動跳出該 App，強制關閉！)
        - 加入動作：**「顯示通知 (Show Notification)」**，提示「⏳ Kairos：專注時段已鎖定此應用！」
 5. 完成儲存！現在只要電腦處於番茄鐘專注時段，在 iPad 開啟分心 App 就會被自動彈回主畫面！
+
+---
+
+## 方案 3：StayFree iPad 專屬無痛橋接 (推薦：全天候自動統計)
+
+如果你在 iPad 上有安裝 StayFree，Kairos 已經內建了 **「StayFree iPad 專屬橋接器」**：
+
+1. **在 iPad 上安裝 StayFree**：
+   - 透過 StayFree 享受 Apple 官方審核核可的 Screen Time API 背景監控。
+2. **加入電腦的 Device Group (配對)**：
+   - 在 iPad StayFree 中點選同步配對，加入電腦 StayFree 的 Device Group 序號。
+3. **Kairos 自動匯入**：
+   - Kairos 會直接讀取電腦本機的 StayFree SQLite 快取，自動將來自 iPad 的紀錄解析為 Kairos 標籤與專注評分！
+   - 支援每 10 分鐘背景定時靜默匯入，零需手動干預。
+

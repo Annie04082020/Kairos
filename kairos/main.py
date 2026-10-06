@@ -7,6 +7,7 @@ import time
 from kairos.config import HOST, PORT
 from kairos.database import init_db
 from kairos.tracker import tracker
+from kairos.stayfree_bridge import stayfree_bridge
 from kairos.api import get_server_lan_ip
 
 def open_browser():
@@ -24,9 +25,18 @@ def main():
     print("[Kairos] 正在初始化本地資料庫 (SQLite)...")
     init_db()
 
-    # 2. Start native window tracker daemon
-    print("[Kairos] 正在啟動背景焦點與進程追蹤守護進程...")
+    # 2. Start native window tracker daemon (Independent for Windows PC)
+    print("[Kairos] 正在啟動 Windows 原生獨立焦點追蹤守護進程...")
     tracker.start()
+
+    # 3. Start StayFree bridge daemon for iPad/iOS if StayFree is detected
+    sf_status = stayfree_bridge.get_status()
+    if sf_status.get("installed"):
+        print(f"[Kairos] 檢測到本地 StayFree (群組: {sf_status.get('device_group')})，啟動 iPad 數據自動橋接...")
+        stayfree_bridge.start_background_daemon()
+    else:
+        print("[Kairos] 未檢測到 StayFree，iPad 支援將純粹走 PWA 與 iOS 捷徑自動化模式。")
+
 
     # 3. Connection URLs
     print("\n" + "-" * 65)
@@ -50,6 +60,7 @@ def main():
         print("\n[Kairos] 收到退出信號，正在安全停止追蹤線程...")
     finally:
         tracker.stop()
+        stayfree_bridge.stop_background_daemon()
         print("[Kairos] 已停止運作。所有數據已安全保存至本地。")
 
 if __name__ == "__main__":

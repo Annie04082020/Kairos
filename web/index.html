@@ -493,6 +493,57 @@
             </div>
           </div>
 
+          <!-- StayFree iPad Dedicated Bridge Card -->
+          <div class="glass-panel p-4 mb-4" id="stayfree-bridge-card">
+            <div class="section-header mb-3">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="app-icon-badge" style="background: rgba(0, 229, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan);">🔌</div>
+                <div>
+                  <h3 class="section-title">StayFree iPad 專屬無痛橋接器</h3>
+                  <p class="section-desc">💻 電腦與 🤖 Android 保持原生獨立守護；📱 iPad 借助 StayFree 官方 Screen Time API，透過電腦 SQLite 零延遲匯入</p>
+                </div>
+              </div>
+              <div id="stayfree-status-badge">
+                <span class="pill-badge pill-dev">檢測中...</span>
+              </div>
+            </div>
+
+            <div class="stayfree-details-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+              <div class="glass-panel p-3">
+                <span class="text-dim text-sm">StayFree 本地狀態</span>
+                <div id="sf-info-installed" class="text-main font-semibold mt-1">檢測中...</div>
+              </div>
+              <div class="glass-panel p-3">
+                <span class="text-dim text-sm">配對群組 (Device Group)</span>
+                <div id="sf-info-group" class="text-cyan font-mono text-sm mt-1" style="word-break: break-all;">載入中...</div>
+              </div>
+              <div class="glass-panel p-3">
+                <span class="text-dim text-sm">已快取遠端事件</span>
+                <div id="sf-info-cached" class="text-main font-semibold mt-1">0 筆</div>
+              </div>
+              <div class="glass-panel p-3">
+                <span class="text-dim text-sm">上次同步至 Kairos</span>
+                <div id="sf-info-last-sync" class="text-main font-mono text-sm mt-1">尚未同步</div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; color: var(--text-muted);">
+                  <input type="checkbox" id="sf-toggle-auto-sync" checked />
+                  自動定時背景同步 (每 10 分鐘自動檢測匯入)
+                </label>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary btn-sm" id="btn-stayfree-sync-now">
+                  <svg viewBox="0 0 24 24" width="15" height="15" stroke="currentColor" stroke-width="2" fill="none"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                  立即同步 iPad 數據
+                </button>
+              </div>
+            </div>
+          </div>
+
+
           <!-- 2 Platform Cards: iPad & Android Guides -->
           <div class="dashboard-two-col mt-4">
             <!-- iPad / iOS Card -->
